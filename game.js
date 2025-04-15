@@ -10,7 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const allEntities = [
     'STONE_1', 'STONE_2', 'STONE_3', 'STONE_4', 'STONE_5',
     'TREE_1', 'TREE_2',
-    'BLOCK_1'
+    'BLOCK_1',
+    'SULFUR_0','SULFUR_1','SULFUR_2',
+    'URAN_0','URAN_1','URAN_2',
+    'IRON_0','IRON_1','IRON_2','IRON_3'    
   ];
 
   let player = {
@@ -25,21 +28,41 @@ document.addEventListener('DOMContentLoaded', () => {
   let mouseX = 0, mouseY = 0;
   let showCollisions = false;
 
-  const naturespawnsIIDs = ['STONE_1', 'STONE_2', 'STONE_3', 'STONE_4', 'STONE_5', 'TREE_1', 'TREE_2'];
-  const blockIIDs = ['STONE_1', 'STONE_2', 'STONE_3', 'STONE_4', 'STONE_5', 'TREE_1', 'TREE_2', 'BLOCK_1'];
+  const blockIIDs = ['STONE_1', 'STONE_2', 'STONE_3', 'STONE_4', 'STONE_5', 'TREE_1', 'TREE_2', 'BLOCK_1', 'SULFUR_0','SULFUR_1','SULFUR_2', 'URAN_0','URAN_1','URAN_2', 'IRON_0','IRON_1','IRON_2','IRON_3'];
   const objectImages = [
-    { type: 'stone', main: 'day-stone0.png' },
-    { type: 'stone', main: 'day-stone1.png' },
-    { type: 'stone', main: 'day-stone2.png' },
-    { type: 'stone', main: 'day-stone3.png' },
-    { type: 'stone', main: 'day-stone4.png' },
-    { type: 'tree', main: 'day-tree0.png', leaf: 'day-treeleaf0.png' },
-    { type: 'tree', main: 'day-tree1.png', leaf: 'day-treeleaf1.png' },
-    { type: 'block', main: Array.from({ length: 22 }, (_, i) => Object.assign(new Image(), { src: `img/day-steel-wall${i}.png` })) }
+      // Stones (5 variations)
+      { type: 'stone', main: 'day-stone0.png' },
+      { type: 'stone', main: 'day-stone1.png' },
+      { type: 'stone', main: 'day-stone2.png' },
+      { type: 'stone', main: 'day-stone3.png' },
+      { type: 'stone', main: 'day-stone4.png' },
+      
+      // Trees (2 variations)
+      { type: 'tree', main: 'day-tree0.png', leaf: 'day-treeleaf0.png' },
+      { type: 'tree', main: 'day-tree1.png', leaf: 'day-treeleaf1.png' },
+      
+      // Block (wall with 22 frames)
+      { type: 'block', main: Array.from({ length: 22 }, (_, i) => Object.assign(new Image(), { src: `img/day-steel-wall${i}.png` })) },
+      
+      // Sulfur (3 variations)
+      { type: 'stone', main: 'day-sulfur0.png' },
+      { type: 'stone', main: 'day-sulfur1.png' },
+      { type: 'stone', main: 'day-sulfur2.png' },
+      
+      // Uranium (3 variations)
+      { type: 'stone', main: 'day-uranium0.png' },
+      { type: 'stone', main: 'day-uranium1.png' },
+      { type: 'stone', main: 'day-uranium2.png' },
+      
+      // Iron (4 variations - using day-steel images based on your naming)
+      { type: 'stone', main: 'day-steel0.png' },
+      { type: 'stone', main: 'day-steel1.png' },
+      { type: 'stone', main: 'day-steel2.png' },
+      { type: 'stone', main: 'day-steel3.png' }
   ].map(obj => ({
-    type: obj.type,
-    main: Array.isArray(obj.main) ? obj.main : Object.assign(new Image(), { src: `img/${obj.main}` }),
-    leaf: obj.leaf ? Object.assign(new Image(), { src: `img/${obj.leaf}` }) : null
+      type: obj.type,
+      main: Array.isArray(obj.main) ? obj.main : Object.assign(new Image(), { src: `img/${obj.main}` }),
+      leaf: obj.leaf ? Object.assign(new Image(), { src: `img/${obj.leaf}` }) : null
   }));
 
   const playerImages = {
@@ -119,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const ox = obj.x * tileSize, oy = obj.y * tileSize;
 
       if (obj.iid.startsWith('BLOCK')) {
-        const scale = 0.9;
+        const scale = 0.7;
         const pw = player.width / 2, ph = player.height / 2;
         const ow = (size.width * scale) / 2, oh = (size.height * scale) / 2;
         if (px + pw > ox - ow && px - pw < ox + ow &&
