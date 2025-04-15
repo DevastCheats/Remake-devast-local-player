@@ -7,19 +7,69 @@ document.addEventListener('DOMContentLoaded', () => {
   const borderWidth = 1;
   const randomSpawnChance = 0.02;
 
-  const allEntities = [
-    'STONE_1', 'STONE_2', 'STONE_3', 'STONE_4', 'STONE_5',
-    'TREE_1', 'TREE_2',
-    'BLOCK_1',
-    'SULFUR_0','SULFUR_1','SULFUR_2',
-    'URAN_0','URAN_1','URAN_2',
-    'IRON_0','IRON_1','IRON_2','IRON_3'    
-  ];
+  // Определение типов объектов и их характеристик
+  const entityTypes = {
+    STONE: {
+      variations: [
+        { id: 'STONE_1', image: 'day-stone0.png', collision: { type: 'slide', radiusScale: 1 / 3 } },
+        { id: 'STONE_2', image: 'day-stone1.png', collision: { type: 'slide', radiusScale: 1 / 3 } },
+        { id: 'STONE_3', image: 'day-stone2.png', collision: { type: 'slide', radiusScale: 1 / 3 } },
+        { id: 'STONE_4', image: 'day-stone3.png', collision: { type: 'slide', radiusScale: 1.5 / 3 } },
+        { id: 'STONE_5', image: 'day-stone4.png', collision: { type: 'slide', radiusScale: 1.5 / 3 } }
+      ]
+    },
+    TREE: {
+      variations: [
+        { id: 'TREE_1', image: 'day-tree0.png', leafImage: 'day-treeleaf0.png', collision: { type: 'slide', radiusScale: 1 / 4 } },
+        { id: 'TREE_2', image: 'day-tree1.png', leafImage: 'day-treeleaf1.png', collision: { type: 'slide', radiusScale: 1 / 4 } }
+      ]
+    },
+    BLOCK: {
+      variations: [
+        {
+          id: 'BLOCK_1',
+          images: Array.from({ length: 22 }, (_, i) => `day-steel-wall${i}.png`),
+          collision: { type: 'block', scale: 0.8 }
+        }
+      ]
+    },
+    SULFUR: {
+      variations: [
+        { id: 'SULFUR_0', image: 'day-sulfur0.png', collision: { type: 'slide', radiusScale: 1 / 4 } },
+        { id: 'SULFUR_1', image: 'day-sulfur1.png', collision: { type: 'slide', radiusScale: 1.5 / 4 } },
+        { id: 'SULFUR_2', image: 'day-sulfur2.png', collision: { type: 'slide', radiusScale: 1.5 / 4 } }
+      ]
+    },
+    URAN: {
+      variations: [
+        { id: 'URAN_0', image: 'day-uranium0.png', collision: { type: 'slide', radiusScale: 1.5 / 4 } },
+        { id: 'URAN_1', image: 'day-uranium1.png', collision: { type: 'slide', radiusScale: 1.5 / 4 } },
+        { id: 'URAN_2', image: 'day-uranium2.png', collision: { type: 'slide', radiusScale: 1.5 / 4 } }
+      ]
+    },
+    IRON: {
+      variations: [
+        { id: 'IRON_0', image: 'day-steel0.png', collision: { type: 'slide', radiusScale: 1 / 4 } },
+        { id: 'IRON_1', image: 'day-steel1.png', collision: { type: 'slide', radiusScale: 1 / 4 } },
+        { id: 'IRON_2', image: 'day-steel2.png', collision: { type: 'slide', radiusScale: 1.5 / 4 } },
+        { id: 'IRON_3', image: 'day-steel3.png', collision: { type: 'slide', radiusScale: 1.5 / 4 } }
+      ]
+    }
+    // Добавьте новый тип, например:
+    // CRYSTAL: {
+    //   variations: [
+    //     { id: 'CRYSTAL_1', image: 'day-crystal0.png', collision: { type: 'block', scale: 0.5 } }
+    //   ]
+    // }
+  };
+
+  const allEntities = Object.values(entityTypes)
+    .flatMap(type => type.variations.map(v => v.id));
 
   let player = {
     x: mapSize / 2,
     y: mapSize / 2,
-    speed: 0.02,
+    speed: 0.04,
     angle: 0,
     width: 64,
     height: 64
@@ -28,42 +78,34 @@ document.addEventListener('DOMContentLoaded', () => {
   let mouseX = 0, mouseY = 0;
   let showCollisions = false;
 
-  const blockIIDs = ['STONE_1', 'STONE_2', 'STONE_3', 'STONE_4', 'STONE_5', 'TREE_1', 'TREE_2', 'BLOCK_1', 'SULFUR_0','SULFUR_1','SULFUR_2', 'URAN_0','URAN_1','URAN_2', 'IRON_0','IRON_1','IRON_2','IRON_3'];
-  const objectImages = [
-      // Stones (5 variations)
-      { type: 'stone', main: 'day-stone0.png' },
-      { type: 'stone', main: 'day-stone1.png' },
-      { type: 'stone', main: 'day-stone2.png' },
-      { type: 'stone', main: 'day-stone3.png' },
-      { type: 'stone', main: 'day-stone4.png' },
-      
-      // Trees (2 variations)
-      { type: 'tree', main: 'day-tree0.png', leaf: 'day-treeleaf0.png' },
-      { type: 'tree', main: 'day-tree1.png', leaf: 'day-treeleaf1.png' },
-      
-      // Block (wall with 22 frames)
-      { type: 'block', main: Array.from({ length: 22 }, (_, i) => Object.assign(new Image(), { src: `img/day-steel-wall${i}.png` })) },
-      
-      // Sulfur (3 variations)
-      { type: 'stone', main: 'day-sulfur0.png' },
-      { type: 'stone', main: 'day-sulfur1.png' },
-      { type: 'stone', main: 'day-sulfur2.png' },
-      
-      // Uranium (3 variations)
-      { type: 'stone', main: 'day-uranium0.png' },
-      { type: 'stone', main: 'day-uranium1.png' },
-      { type: 'stone', main: 'day-uranium2.png' },
-      
-      // Iron (4 variations - using day-steel images based on your naming)
-      { type: 'stone', main: 'day-steel0.png' },
-      { type: 'stone', main: 'day-steel1.png' },
-      { type: 'stone', main: 'day-steel2.png' },
-      { type: 'stone', main: 'day-steel3.png' }
-  ].map(obj => ({
-      type: obj.type,
-      main: Array.isArray(obj.main) ? obj.main : Object.assign(new Image(), { src: `img/${obj.main}` }),
-      leaf: obj.leaf ? Object.assign(new Image(), { src: `img/${obj.leaf}` }) : null
-  }));
+  const objectImages = [];
+  const objectSizes = [];
+  let imagesLoaded = 0;
+  let totalImages = 0;
+
+  // Загрузка изображений
+  Object.values(entityTypes).forEach((type, typeIndex) => {
+    type.variations.forEach((variation, varIndex) => {
+      const images = [];
+      if (variation.images) {
+        variation.images.forEach(imgSrc => {
+          const img = Object.assign(new Image(), { src: `img/${imgSrc}` });
+          images.push(img);
+          totalImages++;
+        });
+      } else {
+        const img = Object.assign(new Image(), { src: `img/${variation.image}` });
+        images.push(img);
+        totalImages++;
+      }
+      objectImages[typeIndex] = objectImages[typeIndex] || [];
+      objectImages[typeIndex][varIndex] = {
+        main: images.length > 1 ? images : images[0],
+        leaf: variation.leafImage ? Object.assign(new Image(), { src: `img/${variation.leafImage}` }) : null
+      };
+      if (variation.leafImage) totalImages++;
+    });
+  });
 
   const playerImages = {
     body: Object.assign(new Image(), { src: "img/day-skin0.png" }),
@@ -71,13 +113,15 @@ document.addEventListener('DOMContentLoaded', () => {
     rightArm: Object.assign(new Image(), { src: "img/day-right-arm0.png" })
   };
 
-  const objectSizes = [];
-  let imagesLoaded = 0;
-  const totalImages = Object.values(playerImages).length + objectImages.reduce((sum, obj) => sum + (Array.isArray(obj.main) ? obj.main.length : 1) + (obj.leaf ? 1 : 0), 0);
+  totalImages += Object.values(playerImages).length;
 
-  function onImageLoad(img, index) {
-    if (index >= 0) {
-      objectSizes[index] = { width: (img.naturalWidth / 3) || 64, height: (img.naturalHeight / 3) || 64 };
+  function onImageLoad(img, typeIndex, varIndex) {
+    if (typeIndex >= 0 && varIndex >= 0) {
+      objectSizes[typeIndex] = objectSizes[typeIndex] || [];
+      objectSizes[typeIndex][varIndex] = {
+        width: (img.naturalWidth / 3) || 64,
+        height: (img.naturalHeight / 3) || 64
+      };
     }
     if (++imagesLoaded >= totalImages) startGame();
   }
@@ -88,23 +132,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   Object.values(playerImages).forEach(img => {
-    img.onload = () => onImageLoad(img, -1);
+    img.onload = () => onImageLoad(img, -1, -1);
     img.onerror = () => onImageError(img.src);
   });
-  objectImages.forEach((obj, index) => {
-    if (Array.isArray(obj.main)) {
-      obj.main.forEach((img, subIndex) => {
-        img.onload = () => onImageLoad(img, index);
-        img.onerror = () => onImageError(img.src);
-      });
-    } else {
-      obj.main.onload = () => onImageLoad(obj.main, index);
-      obj.main.onerror = () => onImageError(obj.main.src);
-    }
-    if (obj.leaf) {
-      obj.leaf.onload = () => onImageLoad(obj.leaf, -1);
-      obj.leaf.onerror = () => onImageError(obj.leaf.src);
-    }
+
+  objectImages.forEach((typeImages, typeIndex) => {
+    typeImages.forEach((obj, varIndex) => {
+      if (Array.isArray(obj.main)) {
+        obj.main.forEach(img => {
+          img.onload = () => onImageLoad(img, typeIndex, varIndex);
+          img.onerror = () => onImageError(img.src);
+        });
+      } else {
+        obj.main.onload = () => onImageLoad(obj.main, typeIndex, varIndex);
+        obj.main.onerror = () => onImageError(obj.main.src);
+      }
+      if (obj.leaf) {
+        obj.leaf.onload = () => onImageLoad(obj.leaf, -1, -1);
+        obj.leaf.onerror = () => onImageError(obj.leaf.src);
+      }
+    });
   });
 
   const objects = [];
@@ -136,21 +183,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const pr = player.width / 2;
 
     for (const obj of objects) {
-      const size = objectSizes[obj.type] || { width: 64, height: 64 };
+      const typeIndex = obj.typeIndex;
+      const varIndex = obj.varIndex;
+      const size = objectSizes[typeIndex][varIndex] || { width: 64, height: 64 };
       if (!size.width || !size.height) continue;
 
+      const variation = Object.values(entityTypes)[typeIndex].variations[varIndex];
+      const collision = variation.collision;
       const ox = obj.x * tileSize, oy = obj.y * tileSize;
 
-      if (obj.iid.startsWith('BLOCK')) {
-        const scale = 0.7;
+      if (collision.type === 'block') {
+        const scale = collision.scale || 0.7;
         const pw = player.width / 2, ph = player.height / 2;
         const ow = (size.width * scale) / 2, oh = (size.height * scale) / 2;
         if (px + pw > ox - ow && px - pw < ox + ow &&
             py + ph > oy - oh && py - ph < oy + oh) {
           return { hasCollision: true, isSlide: false, stoneX: obj.x, stoneY: obj.y };
         }
-      } else {
-        const or = Math.min(size.width, size.height) / (obj.iid.startsWith('STONE') ? 3 : 4);
+      } else if (collision.type === 'slide') {
+        const radiusScale = collision.radiusScale || 1 / 4;
+        const or = Math.min(size.width, size.height) * radiusScale;
         if (Math.hypot(px - ox, py - oy) < pr + or) {
           return {
             hasCollision: true,
@@ -165,16 +217,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function getBlockTextureIndex(obj, objects) {
-    if (!obj.iid.startsWith('BLOCK')) return 0;
+    const variation = Object.values(entityTypes)[obj.typeIndex].variations[obj.varIndex];
+    if (variation.collision.type !== 'block') return 0;
     const x = obj.x, y = obj.y;
-    const right = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x + 1 && o.y === y);
-    const left = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x - 1 && o.y === y);
-    const down = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x && o.y === y + 1);
-    const up = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x && o.y === y - 1);
-    const rightDown = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x + 1 && o.y === y + 1);
-    const leftDown = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x - 1 && o.y === y + 1);
-    const leftUp = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x - 1 && o.y === y - 1);
-    const rightUp = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x + 1 && o.y === y - 1);
+    const right = objects.some(o => Object.values(entityTypes)[o.typeIndex].variations[o.varIndex].id === variation.id && o.x === x + 1 && o.y === y);
+    const left = objects.some(o => Object.values(entityTypes)[o.typeIndex].variations[o.varIndex].id === variation.id && o.x === x - 1 && o.y === y);
+    const down = objects.some(o => Object.values(entityTypes)[o.typeIndex].variations[o.varIndex].id === variation.id && o.x === x && o.y === y + 1);
+    const up = objects.some(o => Object.values(entityTypes)[o.typeIndex].variations[o.varIndex].id === variation.id && o.x === x && o.y === y - 1);
+    const rightDown = objects.some(o => Object.values(entityTypes)[o.typeIndex].variations[o.varIndex].id === variation.id && o.x === x + 1 && o.y === y + 1);
+    const leftDown = objects.some(o => Object.values(entityTypes)[o.typeIndex].variations[o.varIndex].id === variation.id && o.x === x - 1 && o.y === y + 1);
+    const leftUp = objects.some(o => Object.values(entityTypes)[o.typeIndex].variations[o.varIndex].id === variation.id && o.x === x - 1 && o.y === y - 1);
+    const rightUp = objects.some(o => Object.values(entityTypes)[o.typeIndex].variations[o.varIndex].id === variation.id && o.x === x + 1 && o.y === y - 1);
 
     if (right && left && down && up) return 7;
     if (right && left && down) return 8;
@@ -207,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const moveX = (keys[68] || keys[39] ? 1 : 0) - (keys[65] || keys[37] ? 1 : 0);
     const moveY = (keys[83] || keys[40] ? 1 : 0) - (keys[87] || keys[38] ? 1 : 0);
-    const speed = keys[16] ? 0.04 : player.speed;
+    const speed = keys[16] ? 0.06 : player.speed;
 
     if (moveX || moveY) {
       const len = Math.hypot(moveX, moveY);
@@ -283,16 +336,17 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.fillRect(-offsetX, -offsetY, mapSize * tileSize, mapSize * tileSize);
 
     objects.forEach(obj => {
-      const size = objectSizes[obj.type] || { width: 64, height: 64 };
+      const size = objectSizes[obj.typeIndex][obj.varIndex] || { width: 64, height: 64 };
       const x = obj.x * tileSize - offsetX - size.width / 2;
       const y = obj.y * tileSize - offsetY - size.height / 2;
-      if (obj.iid.startsWith('BLOCK')) {
+      const images = objectImages[obj.typeIndex][obj.varIndex];
+      if (Object.values(entityTypes)[obj.typeIndex].variations[obj.varIndex].collision.type === 'block') {
         const textureIndex = getBlockTextureIndex(obj, objects);
-        ctx.drawImage(objectImages[obj.type].main[textureIndex], x, y, size.width, size.height);
+        ctx.drawImage(images.main[textureIndex], x, y, size.width, size.height);
       } else {
-        ctx.drawImage(objectImages[obj.type].main, x, y, size.width, size.height);
-        if (objectImages[obj.type].leaf) {
-          ctx.drawImage(objectImages[obj.type].leaf, x, y, size.width, size.height);
+        ctx.drawImage(images.main, x, y, size.width, size.height);
+        if (images.leaf) {
+          ctx.drawImage(images.leaf, x, y, size.width, size.height);
         }
       }
     });
@@ -300,17 +354,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (showCollisions) {
       ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
       objects.forEach(obj => {
-        const size = objectSizes[obj.type] || { width: 64, height: 64 };
+        const size = objectSizes[obj.typeIndex][obj.varIndex] || { width: 64, height: 64 };
         const ox = obj.x * tileSize - offsetX;
         const oy = obj.y * tileSize - offsetY;
+        const variation = Object.values(entityTypes)[obj.typeIndex].variations[obj.varIndex];
 
-        if (obj.iid.startsWith('BLOCK')) {
-          const scale = 0.9;
+        if (variation.collision.type === 'block') {
+          const scale = variation.collision.scale || 0.9;
           const w = size.width * scale;
           const h = size.height * scale;
           ctx.fillRect(ox - w / 2, oy - h / 2, w, h);
-        } else {
-          const r = Math.min(size.width, size.height) / (obj.iid.startsWith('STONE') ? 3 : 4);
+        } else if (variation.collision.type === 'slide') {
+          const radiusScale = variation.collision.radiusScale || 1 / 4;
+          const r = Math.min(size.width, size.height) * radiusScale;
           ctx.beginPath();
           ctx.arc(ox, oy, r, 0, Math.PI * 2);
           ctx.fill();
@@ -337,43 +393,43 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function startGame() {
-    // Генерация объектов по всей карте
+    // Генерация объектов
     for (let x = borderWidth; x < mapSize - borderWidth; x++) {
       for (let y = borderWidth; y < mapSize - borderWidth; y++) {
         if (Math.hypot(x - 15, y - 12.5) < 5 || Math.hypot(x - 135, y - 12.5) < 5) continue;
         if (Math.random() < randomSpawnChance) {
-          const type = Math.floor(Math.random() * blockIIDs.length);
-          const size = objectSizes[type] || { width: 64, height: 64 };
+          const typeIndex = Math.floor(Math.random() * Object.keys(entityTypes).length);
+          const variations = Object.values(entityTypes)[typeIndex].variations;
+          const varIndex = Math.floor(Math.random() * variations.length);
+          const size = objectSizes[typeIndex][varIndex] || { width: 64, height: 64 };
           if (objects.every(obj => {
-            const os = objectSizes[obj.type] || { width: 64, height: 64 };
+            const os = objectSizes[obj.typeIndex][obj.varIndex] || { width: 64, height: 64 };
             return Math.hypot(x - obj.x, y - obj.y) >= Math.max((os.width + size.width) / tileSize / 2, (os.height + size.height) / tileSize / 2);
           })) {
-            objects.push({ x, y, type, iid: blockIIDs[type] });
+            objects.push({ x, y, typeIndex, varIndex, iid: variations[varIndex].id });
           }
         }
       }
     }
 
-    // Демонстрация состыковки блоков около спавна (x: 75, y: 75)
+    // Демонстрация блоков около спавна
     const spawnX = Math.floor(mapSize / 2);
     const spawnY = Math.floor(mapSize / 2);
-    const blockType = blockIIDs.indexOf('BLOCK_1');
+    const blockTypeIndex = Object.keys(entityTypes).indexOf('BLOCK');
+    const blockVarIndex = entityTypes.BLOCK.variations.findIndex(v => v.id === 'BLOCK_1');
 
-    // Одиночный блок (текстура 0)
-    objects.push({ x: spawnX + 2, y: spawnY, type: blockType, iid: 'BLOCK_1' });
-    objects.push({ x: spawnX + 3, y: spawnY, type: blockType, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 2, y: spawnY, typeIndex: blockTypeIndex, varIndex: blockVarIndex, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 3, y: spawnY, typeIndex: blockTypeIndex, varIndex: blockVarIndex, iid: 'BLOCK_1' });
 
-    objects.push({ x: spawnX + 2, y: spawnY+3, type: blockType, iid: 'BLOCK_1' });
-    objects.push({ x: spawnX + 3, y: spawnY+3, type: blockType, iid: 'BLOCK_1' });
-    objects.push({ x: spawnX + 2, y: spawnY+4, type: blockType, iid: 'BLOCK_1' });
-    objects.push({ x: spawnX + 3, y: spawnY+4, type: blockType, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 2, y: spawnY + 3, typeIndex: blockTypeIndex, varIndex: blockVarIndex, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 3, y: spawnY + 3, typeIndex: blockTypeIndex, varIndex: blockVarIndex, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 2, y: spawnY + 4, typeIndex: blockTypeIndex, varIndex: blockVarIndex, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 3, y: spawnY + 4, typeIndex: blockTypeIndex, varIndex: blockVarIndex, iid: 'BLOCK_1' });
 
-    objects.push({ x: spawnX + 2, y: spawnY+6, type: blockType, iid: 'BLOCK_1' });
-    objects.push({ x: spawnX + 3, y: spawnY+6, type: blockType, iid: 'BLOCK_1' });
-    objects.push({ x: spawnX + 2, y: spawnY+7, type: blockType, iid: 'BLOCK_1' });
-    objects.push({ x: spawnX + 3, y: spawnY+7, type: blockType, iid: 'BLOCK_1' });
-
-
+    objects.push({ x: spawnX + 2, y: spawnY + 6, typeIndex: blockTypeIndex, varIndex: blockVarIndex, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 3, y: spawnY + 6, typeIndex: blockTypeIndex, varIndex: blockVarIndex, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 2, y: spawnY + 7, typeIndex: blockTypeIndex, varIndex: blockVarIndex, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 3, y: spawnY + 7, typeIndex: blockTypeIndex, varIndex: blockVarIndex, iid: 'BLOCK_1' });
 
     function gameLoop() {
       update();
