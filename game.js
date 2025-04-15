@@ -5,6 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const mapSize = 150;
   const tileSize = 64;
   const borderWidth = 1;
+  const randomSpawnChance = 0.02;
+
+  const allEntities = [
+    'STONE_1', 'STONE_2', 'STONE_3', 'STONE_4', 'STONE_5',
+    'TREE_1', 'TREE_2',
+    'BLOCK_1'
+  ];
 
   let player = {
     x: mapSize / 2,
@@ -16,7 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   let mouseX = 0, mouseY = 0;
+  let showCollisions = false;
 
+  const naturespawnsIIDs = ['STONE_1', 'STONE_2', 'STONE_3', 'STONE_4', 'STONE_5', 'TREE_1', 'TREE_2'];
   const blockIIDs = ['STONE_1', 'STONE_2', 'STONE_3', 'STONE_4', 'STONE_5', 'TREE_1', 'TREE_2', 'BLOCK_1'];
   const objectImages = [
     { type: 'stone', main: 'day-stone0.png' },
@@ -26,10 +35,10 @@ document.addEventListener('DOMContentLoaded', () => {
     { type: 'stone', main: 'day-stone4.png' },
     { type: 'tree', main: 'day-tree0.png', leaf: 'day-treeleaf0.png' },
     { type: 'tree', main: 'day-tree1.png', leaf: 'day-treeleaf1.png' },
-    { type: 'block', main: 'day-steel-wall0.png' }
+    { type: 'block', main: Array.from({ length: 22 }, (_, i) => Object.assign(new Image(), { src: `img/day-steel-wall${i}.png` })) }
   ].map(obj => ({
     type: obj.type,
-    main: Object.assign(new Image(), { src: `img/${obj.main}` }),
+    main: Array.isArray(obj.main) ? obj.main : Object.assign(new Image(), { src: `img/${obj.main}` }),
     leaf: obj.leaf ? Object.assign(new Image(), { src: `img/${obj.leaf}` }) : null
   }));
 
@@ -41,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const objectSizes = [];
   let imagesLoaded = 0;
-  const totalImages = Object.values(playerImages).length + objectImages.reduce((sum, obj) => sum + 1 + (obj.leaf ? 1 : 0), 0);
+  const totalImages = Object.values(playerImages).length + objectImages.reduce((sum, obj) => sum + (Array.isArray(obj.main) ? obj.main.length : 1) + (obj.leaf ? 1 : 0), 0);
 
   function onImageLoad(img, index) {
     if (index >= 0) {
@@ -60,8 +69,15 @@ document.addEventListener('DOMContentLoaded', () => {
     img.onerror = () => onImageError(img.src);
   });
   objectImages.forEach((obj, index) => {
-    obj.main.onload = () => onImageLoad(obj.main, index);
-    obj.main.onerror = () => onImageError(obj.main.src);
+    if (Array.isArray(obj.main)) {
+      obj.main.forEach((img, subIndex) => {
+        img.onload = () => onImageLoad(img, index);
+        img.onerror = () => onImageError(img.src);
+      });
+    } else {
+      obj.main.onload = () => onImageLoad(obj.main, index);
+      obj.main.onerror = () => onImageError(obj.main.src);
+    }
     if (obj.leaf) {
       obj.leaf.onload = () => onImageLoad(obj.leaf, -1);
       obj.leaf.onerror = () => onImageError(obj.leaf.src);
@@ -71,7 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const objects = [];
   const keys = {};
 
-  document.addEventListener('keydown', e => { keys[e.keyCode] = true; });
+  document.addEventListener('keydown', e => {
+    keys[e.keyCode] = true;
+    if (e.keyCode === 71) showCollisions = !showCollisions;
+  });
   document.addEventListener('keyup', e => { keys[e.keyCode] = false; });
 
   function resizeCanvas() {
@@ -122,6 +141,42 @@ document.addEventListener('DOMContentLoaded', () => {
     return { hasCollision: false };
   }
 
+  function getBlockTextureIndex(obj, objects) {
+    if (!obj.iid.startsWith('BLOCK')) return 0;
+    const x = obj.x, y = obj.y;
+    const right = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x + 1 && o.y === y);
+    const left = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x - 1 && o.y === y);
+    const down = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x && o.y === y + 1);
+    const up = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x && o.y === y - 1);
+    const rightDown = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x + 1 && o.y === y + 1);
+    const leftDown = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x - 1 && o.y === y + 1);
+    const leftUp = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x - 1 && o.y === y - 1);
+    const rightUp = objects.some(o => o.iid.startsWith('BLOCK') && o.x === x + 1 && o.y === y - 1);
+
+    if (right && left && down && up) return 7;
+    if (right && left && down) return 8;
+    if (right && left && up) return 9;
+    if (down && left && up) return 10;
+    if (down && up && right) return 11;
+    if (right && down && rightDown && !left && !up) return 12;
+    if (left && down && leftDown && !right && !up) return 13;
+    if (left && up && leftUp && !right && !down) return 14;
+    if (right && up && rightUp && !left && !down) return 15;
+    if (right && up && !left && !down) return 16;
+    if (left && up && !right && !down) return 17;
+    if (down && left && !right && !up) return 18;
+    if (down && right && !left && !up) return 19;
+    if (down && right && up && rightDown && !left) return 20;
+    if (down && right && left && up && rightDown && !leftUp && !rightUp) return 21;
+    if (down && up && !left && !right) return 6;
+    if (right && left && !up && !down) return 5;
+    if (right && !left && !up && !down) return 4;
+    if (left && !right && !up && !down) return 3;
+    if (up && !left && !right && !down) return 2;
+    if (down && !left && !right && !up) return 1;
+    return 0;
+  }
+
   function update() {
     if (isNaN(player.x) || isNaN(player.y)) {
       player.x = player.y = mapSize / 2;
@@ -164,15 +219,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const r = player.width / (2 * tileSize);
         player.x = Math.max(r, Math.min(mapSize - r, newX));
         player.y = Math.max(r, Math.min(mapSize - r, newY));
-      } else if (!collision.isSlide) { // Обработка коллизии с блоком
-        // Проверяем движение только по X
+      } else if (!collision.isSlide) {
         if (moveX) {
           const xOnly = checkCollision(newX, player.y);
           if (!xOnly.hasCollision || xOnly.isSlide) {
             player.x = newX;
           }
         }
-        // Проверяем движение только по Y
         if (moveY) {
           const yOnly = checkCollision(player.x, newY);
           if (!yOnly.hasCollision || yOnly.isSlide) {
@@ -182,6 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   }
+
   function drawPlayer() {
     const cx = canvas.width / 2, cy = canvas.height / 2;
     player.angle = Math.atan2(mouseY - cy, mouseX - cx);
@@ -209,37 +263,42 @@ document.addEventListener('DOMContentLoaded', () => {
       const size = objectSizes[obj.type] || { width: 64, height: 64 };
       const x = obj.x * tileSize - offsetX - size.width / 2;
       const y = obj.y * tileSize - offsetY - size.height / 2;
-      ctx.drawImage(objectImages[obj.type].main, x, y, size.width, size.height);
-      if (objectImages[obj.type].leaf) {
-        ctx.drawImage(objectImages[obj.type].leaf, x, y, size.width, size.height);
-      }
-    });
-
-    // Рендеринг коллизий
-    ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
-    objects.forEach(obj => {
-      const size = objectSizes[obj.type] || { width: 64, height: 64 };
-      const ox = obj.x * tileSize - offsetX;
-      const oy = obj.y * tileSize - offsetY;
-
       if (obj.iid.startsWith('BLOCK')) {
-        const scale = 0.9;
-        const w = size.width * scale;
-        const h = size.height * scale;
-        ctx.fillRect(ox - w / 2, oy - h / 2, w, h);
+        const textureIndex = getBlockTextureIndex(obj, objects);
+        ctx.drawImage(objectImages[obj.type].main[textureIndex], x, y, size.width, size.height);
       } else {
-        const r = Math.min(size.width, size.height) / (obj.iid.startsWith('STONE') ? 3 : 4);
-        ctx.beginPath();
-        ctx.arc(ox, oy, r, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.drawImage(objectImages[obj.type].main, x, y, size.width, size.height);
+        if (objectImages[obj.type].leaf) {
+          ctx.drawImage(objectImages[obj.type].leaf, x, y, size.width, size.height);
+        }
       }
     });
 
-    // Коллизия игрока
-    const pr = player.width / 2;
-    ctx.beginPath();
-    ctx.arc(canvas.width / 2, canvas.height / 2, pr, 0, Math.PI * 2);
-    ctx.fill();
+    if (showCollisions) {
+      ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+      objects.forEach(obj => {
+        const size = objectSizes[obj.type] || { width: 64, height: 64 };
+        const ox = obj.x * tileSize - offsetX;
+        const oy = obj.y * tileSize - offsetY;
+
+        if (obj.iid.startsWith('BLOCK')) {
+          const scale = 0.9;
+          const w = size.width * scale;
+          const h = size.height * scale;
+          ctx.fillRect(ox - w / 2, oy - h / 2, w, h);
+        } else {
+          const r = Math.min(size.width, size.height) / (obj.iid.startsWith('STONE') ? 3 : 4);
+          ctx.beginPath();
+          ctx.arc(ox, oy, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      const pr = player.width / 2;
+      ctx.beginPath();
+      ctx.arc(canvas.width / 2, canvas.height / 2, pr, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     drawPlayer();
 
@@ -255,10 +314,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function startGame() {
+    // Генерация объектов по всей карте
     for (let x = borderWidth; x < mapSize - borderWidth; x++) {
       for (let y = borderWidth; y < mapSize - borderWidth; y++) {
-        if (Math.hypot(x - 15, y - 12.5) < 5 || Math.hypot(x - 135, y - 142.5) < 5) continue;
-        if (Math.random() < 0.02) {
+        if (Math.hypot(x - 15, y - 12.5) < 5 || Math.hypot(x - 135, y - 12.5) < 5) continue;
+        if (Math.random() < randomSpawnChance) {
           const type = Math.floor(Math.random() * blockIIDs.length);
           const size = objectSizes[type] || { width: 64, height: 64 };
           if (objects.every(obj => {
@@ -270,6 +330,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     }
+
+    // Демонстрация состыковки блоков около спавна (x: 75, y: 75)
+    const spawnX = Math.floor(mapSize / 2);
+    const spawnY = Math.floor(mapSize / 2);
+    const blockType = blockIIDs.indexOf('BLOCK_1');
+
+    // Одиночный блок (текстура 0)
+    objects.push({ x: spawnX + 2, y: spawnY, type: blockType, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 3, y: spawnY, type: blockType, iid: 'BLOCK_1' });
+
+    objects.push({ x: spawnX + 2, y: spawnY+3, type: blockType, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 3, y: spawnY+3, type: blockType, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 2, y: spawnY+4, type: blockType, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 3, y: spawnY+4, type: blockType, iid: 'BLOCK_1' });
+
+    objects.push({ x: spawnX + 2, y: spawnY+6, type: blockType, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 3, y: spawnY+6, type: blockType, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 2, y: spawnY+7, type: blockType, iid: 'BLOCK_1' });
+    objects.push({ x: spawnX + 3, y: spawnY+7, type: blockType, iid: 'BLOCK_1' });
+
+
 
     function gameLoop() {
       update();
